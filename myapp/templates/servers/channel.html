@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+
+{% block title %}{{ channel.name }} - {{ server.name }} - Discord Clone{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="row g-0">
+        <!-- Channels Sidebar -->
+        <div class="col-auto">
+            <div class="discord-sidebar" style="width: 200px;">
+                <div class="p-3">
+                    <h5 class="text-white mb-3">
+                        <i class="fas fa-hashtag me-2"></i>{{ server.name }}
+                    </h5>
+                    
+                    {% if server.description %}
+                        <p class="text-muted small mb-3">{{ server.description }}</p>
+                    {% endif %}
+                    
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="text-white mb-0">Channels</h6>
+                        <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createChannelModal">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                    
+                    {% if server.channels %}
+                        {% for ch in server.channels %}
+                            <a href="{{ url_for('servers.view_channel', server_id=server.id, channel_id=ch.id) }}" 
+                               class="channel-item {% if ch.id == channel.id %}active{% endif %}">
+                                <i class="fas fa-hashtag me-2"></i>{{ ch.name }}
+                            </a>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted small">No channels yet</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Chat Area -->
+        <div class="col">
+            <div class="chat-container">
+                <div class="chat-header">
+                    <h4 class="text-white mb-0">
+                        <i class="fas fa-hashtag me-2"></i>{{ channel.name }}
+                    </h4>
+                    <p class="text-muted mb-0">{{ channel.description or 'Welcome to ' + channel.name }}</p>
+                </div>
+                
+                <div class="chat-messages" id="messages">
+                    {% for message in messages %}
+                        <div class="message">
+                            <div class="message-avatar">
+                                {{ message.author.username[0].upper() }}
+                            </div>
+                            <div class="message-content">
+                                <div class="message-header">
+                                    <span class="message-username">{{ message.author.username }}</span>
+                                    <span class="message-timestamp">{{ message.created_at.strftime('%H:%M') }}</span>
+                                </div>
+                                <div class="message-text">{{ message.content }}</div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+                
+                <div class="chat-input-container">
+                    <form id="messageForm">
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="messageInput" 
+                                   placeholder="Message #{{ channel.name }}" autocomplete="off">
+                            <button class="btn btn-primary" type="submit">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Channel Modal -->
+<div class="modal fade" id="createChannelModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content" style="background-color: var(--discord-channels); border: 1px solid rgba(255, 255, 255, 0.1);">
+            <div class="modal-header">
+                <h5 class="modal-title text-white">Create Channel</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('servers.create_channel', server_id=server.id) }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="name" class="form-label text-white">Channel Name</label>
+                        <input type="text" class="form-control" id="name" name="name" 
+                               placeholder="e.g. general" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create Channel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Socket.IO connection
+    const socket = io();
+    const room = '{{ server.id }}_{{ channel.id }}';
+    
+    // Join room when page loads
+    socket.emit('join', {room: room});
+    
+    // Handle incoming messages
+    socket.on('message', function(data) {
+        const messagesContainer = document.getElementById('messages');
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'message';
+        
+        if (data.type === 'system') {
+            messageDiv.innerHTML = `
+                <div class="system-message">
+                    <i class="fas fa-info-circle me-1"></i>${data.content}
+                </div>
+            `;
+        } else {
+            messageDiv.innerHTML = `
+                <div class="message-avatar">
+                    ${data.username[0].toUpperCase()}
+                </div>
+                <div class="message-content">
+                    <div class="message-header">
+                        <span class="message-username">${data.username}</span>
+                        <span class="message-timestamp">${data.timestamp}</span>
+                    </div>
+                    <div class="message-text">${data.content}</div>
+                </div>
+            `;
+        }
+        
+        messagesContainer.appendChild(messageDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    });
+    
+    // Handle message form submission
+    document.getElementById('messageForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const messageInput = document.getElementById('messageInput');
+        const message = messageInput.value.trim();
+        
+        if (message) {
+            socket.emit('send_message', {
+                room: room,
+                content: message
+            });
+            messageInput.value = '';
+        }
+    });
+    
+    // Auto-scroll to bottom on page load
+    window.addEventListener('load', function() {
+        const messagesContainer = document.getElementById('messages');
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    });
+</script>
+{% endblock %}
