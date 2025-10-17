@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% set in_chat = true %}
+{% set current_channel = channel %}
+
+
+{% block title %}#{{ channel.name }} - {{ server.name }}{% endblock %}
+
+
+{% block channels %}
+  <div class="section-title">{{ server.name }}</div>
+  <ul class="list-unstyled">
+    {% for c in server.channels %}
+      <li class="mb-1">
+        <a href="{{ url_for('servers.view_channel', server_id=server.id, channel_id=c.id) }}"
+           class="text-decoration-none text-white d-block py-1 {% if request.path.endswith(c.id|string) %}bg-gray-600{% endif %}">
+          # {{ c.name }}
+        </a>
+      </li>
+    {% endfor %}
+  </ul>
+
+
+  {% if membership.role in ["owner", "admin"] %}
+    <a href="{{ url_for('servers.create_channel', server_id=server.id) }}"
+       class="btn btn-sm btn-secondary mt-2 w-100 mb-2">
+      ➕ Add Channel
+    </a>
+    <a href="{{ url_for('servers.create_invite', server_id=server.id) }}"
+       class="btn btn-sm btn-success w-100 mb-2">
+      🔗 Invite Friends
+    </a>
+  {% endif %}
+
+
+  {% if form %}
+    <div class="join-box mt-3">
+      <form method="POST" action="{{ url_for('servers.join_by_code_inline') }}" id="join-form">
+        {{ form.hidden_tag() }}
+        <div class="input-group input-group-sm">
+          {{ form.code(class="form-control text-center", placeholder="Enter code (e.g., ABC123)", id="join-code-input", required=True) }}
+          <button class="btn btn-outline-primary" type="submit">Join</button>
+        </div>
+        {% for error in form.code.errors %}
+          <div class="text-danger small mt-1 text-center">{{ error }}</div>
+        {% endfor %}
+      </form>
+    </div>
+  {% endif %}
+{% endblock %}
+
+
+{% block chat %}
+  <div id="chat-panel" class="p-3"
+       style="height: 60vh; overflow-y: auto; background-color: #40444b;">
+    <div id="chat-messages">
+      {% for message in messages %}
+        <div class="mb-2">
+          <strong>{{ message.author.username if message.author else "Anonymous" }}</strong>
+          <small class="text-muted ms-2">{{ message.timestamp.strftime('%Y-%m-%d %H:%M') }}</small>
+          <div>{{ message.content }}</div>
+        </div>
+      {% else %}
+        <p class="text-muted"><em>No messages yet. Start the conversation!</em></p>
+      {% endfor %}
+    </div>
+    <div class="mt-2 text-end">
+      <button id="toggle-theme" class="btn btn-sm btn-outline-secondary">🌙 Dark Mode</button>
+    </div>
+  </div>
+{% endblock %}
+
+
+{% block chatinput %}
+  <form id="chat-form" class="d-flex mt-2">
+    <input id="message-input" type="text" class="form-control me-2"
+           placeholder="Message #{{ channel.name }}" autocomplete="off">
+    <button class="btn btn-primary">Send</button>
+  </form>
+  <script>
+    // Theme toggle functionality
+    document.addEventListener("DOMContentLoaded", () => {
+      const chatPanel = document.getElementById("chat-panel");
+      const toggleBtn = document.getElementById("toggle-theme");
+      
+      if (toggleBtn) {
+        const savedTheme = localStorage.getItem("theme");
+        if (savedTheme === "dark") {
+          chatPanel.classList.remove("bg-light", "text-dark");
+          chatPanel.classList.add("bg-dark", "text-light");
+          toggleBtn.textContent = "☀️ Light Mode";
+        }
+
+        toggleBtn.addEventListener("click", () => {
+          const isDark = chatPanel.classList.contains("bg-dark");
+          if (isDark) {
+            chatPanel.classList.remove("bg-dark", "text-light");
+            chatPanel.classList.add("bg-light", "text-dark");
+            toggleBtn.textContent = "🌙 Dark Mode";
+            localStorage.setItem("theme", "light");
+          } else {
+            chatPanel.classList.remove("bg-light", "text-dark");
+            chatPanel.classList.add("bg-dark", "text-light");
+            toggleBtn.textContent = "☀️ Light Mode";
+            localStorage.setItem("theme", "dark");
+          }
+          document.querySelectorAll(".chat").forEach(el => {
+            el.classList.toggle("bg-light", !isDark);
+            el.classList.toggle("text-dark", !isDark);
+            el.classList.toggle("bg-dark", isDark);
+            el.classList.toggle("text-light", isDark);
+          });
+        });
+      }
+
+      // Join form handling
+      const joinForm = document.getElementById("join-form");
+      const joinInput = document.getElementById("join-code-input");
+      
+      if (joinForm && joinInput) {
+        joinInput.addEventListener("focus", () => joinInput.select());
+        joinForm.addEventListener("submit", (e) => {
+          e.preventDefault();
+          if (joinInput.value.trim()) {
+            joinForm.submit();
+            setTimeout(() => { joinInput.value = ""; }, 500);
+          }
+        });
+      }
+    });
+  </script>
+{% endblock %}
+
+
+{% block members %}
+  <h5 class="mb-3">Members</h5>
+  {% if server and server.members %}
+    <ul class="list-unstyled">
+      {% for m in server.members %}
+        <li class="mb-2 d-flex justify-content-between align-items-center" data-user-id="{{ m.user_id }}">
+          <div class="d-flex align-items-center">
+            <span class="me-2 status-indicator {% if m.user.is_online %}text-success{% else %}text-muted{% endif %}" title="{% if m.user.is_online %}Online{% else %}Offline{% endif %}">●</span>
+            <span>{{ m.user.username }}</span>
+          </div>
+          <span class="badge bg-secondary">{{ m.role|capitalize }}</span>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="text-muted">No members yet.</p>
+  {% endif %}
+{% endblock %}
