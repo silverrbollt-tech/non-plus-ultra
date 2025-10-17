@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}Register - Discord Clone{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-4">
+            <div class="card mt-5" style="background-color: var(--discord-channels); border: 1px solid rgba(255, 255, 255, 0.1);">
+                <div class="card-body p-4">
+                    <h2 class="text-center text-white mb-4">Create an account</h2>
+                    
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+                    
+                    <form method="POST">
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="mb-3">
+                            {{ form.username.label(class="form-label text-white") }}
+                            {{ form.username(class="form-control") }}
+                            {% if form.username.errors %}
+                                <div class="text-danger small">
+                                    {% for error in form.username.errors %}
+                                        <div>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.email.label(class="form-label text-white") }}
+                            {{ form.email(class="form-control") }}
+                            {% if form.email.errors %}
+                                <div class="text-danger small">
+                                    {% for error in form.email.errors %}
+                                        <div>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.password.label(class="form-label text-white") }}
+                            {{ form.password(class="form-control") }}
+                            {% if form.password.errors %}
+                                <div class="text-danger small">
+                                    {% for error in form.password.errors %}
+                                        <div>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.password2.label(class="form-label text-white") }}
+                            {{ form.password2(class="form-control") }}
+                            {% if form.password2.errors %}
+                                <div class="text-danger small">
+                                    {% for error in form.password2.errors %}
+                                        <div>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="d-grid">
+                            {{ form.submit(class="btn btn-primary") }}
+                        </div>
+                    </form>
+                    
+                    <div class="text-center mt-3">
+                        <p class="text-muted">Already have an account? 
+                            <a href="{{ url_for('auth.login') }}" class="text-primary">Sign in</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

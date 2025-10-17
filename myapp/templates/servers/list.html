@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}Servers - Discord Clone{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="text-white mb-0">Your Servers</h2>
+                <a href="{{ url_for('servers.create_server') }}" class="btn btn-primary">
+                    <i class="fas fa-plus me-1"></i>Create Server
+                </a>
+            </div>
+            
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            
+            {% if servers %}
+                <div class="row">
+                    {% for server in servers %}
+                        <div class="col-md-4 mb-3">
+                            <div class="card" style="background-color: var(--discord-channels); border: 1px solid rgba(255, 255, 255, 0.1);">
+                                <div class="card-body">
+                                    <h5 class="card-title text-white">
+                                        <i class="fas fa-server me-2"></i>{{ server.name }}
+                                    </h5>
+                                    {% if server.description %}
+                                        <p class="card-text text-muted">{{ server.description }}</p>
+                                    {% endif %}
+                                    <p class="card-text">
+                                        <small class="text-muted">
+                                            <i class="fas fa-users me-1"></i>{{ server.members|length }} members
+                                        </small>
+                                    </p>
+                                    <div class="d-flex gap-2">
+                                        <a href="{{ url_for('servers.view_server', server_id=server.id) }}" 
+                                           class="btn btn-primary btn-sm">
+                                            <i class="fas fa-arrow-right me-1"></i>Enter
+                                        </a>
+                                        <button class="btn btn-outline-secondary btn-sm" 
+                                                onclick="copyJoinCode('{{ server.join_code }}')">
+                                            <i class="fas fa-copy me-1"></i>Copy Code
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-server fa-3x text-muted mb-3"></i>
+                    <h4 class="text-muted">No servers yet</h4>
+                    <p class="text-muted">Create your first server or join one with a code!</p>
+                    <a href="{{ url_for('servers.create_server') }}" class="btn btn-primary">
+                        <i class="fas fa-plus me-1"></i>Create Server
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+function copyJoinCode(code) {
+    navigator.clipboard.writeText(code).then(function() {
+        // Show a temporary success message
+        const btn = event.target.closest('button');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check me-1"></i>Copied!';
+        btn.classList.remove('btn-outline-secondary');
+        btn.classList.add('btn-success');
+        
+        setTimeout(() => {
+            btn.innerHTML = originalText;
+            btn.classList.remove('btn-success');
+            btn.classList.add('btn-outline-secondary');
+        }, 2000);
+    });
+}
+</script>
+{% endblock %}

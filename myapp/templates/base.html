@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Discord Clone{% endblock %}</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Socket.IO -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    
+    <style>
+        :root {
+            --discord-bg: #36393f;
+            --discord-sidebar: #2f3136;
+            --discord-channels: #2f3136;
+            --discord-chat: #36393f;
+            --discord-text: #dcddde;
+            --discord-muted: #72767d;
+            --discord-accent: #5865f2;
+        }
+        
+        body {
+            background-color: var(--discord-bg);
+            color: var(--discord-text);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .discord-sidebar {
+            background-color: var(--discord-sidebar);
+            min-height: 100vh;
+            width: 240px;
+            position: fixed;
+            left: 0;
+            top: 0;
+            padding: 0;
+            overflow-y: auto;
+        }
+        
+        .discord-main {
+            margin-left: 240px;
+            min-height: 100vh;
+        }
+        
+        .server-item {
+            padding: 8px 16px;
+            color: var(--discord-text);
+            text-decoration: none;
+            display: block;
+            border-radius: 4px;
+            margin: 2px 8px;
+            transition: background-color 0.2s;
+        }
+        
+        .server-item:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: var(--discord-text);
+            text-decoration: none;
+        }
+        
+        .server-item.active {
+            background-color: var(--discord-accent);
+        }
+        
+        .channel-item {
+            padding: 6px 16px;
+            color: var(--discord-muted);
+            text-decoration: none;
+            display: block;
+            border-radius: 4px;
+            margin: 1px 8px;
+            font-size: 14px;
+        }
+        
+        .channel-item:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: var(--discord-text);
+            text-decoration: none;
+        }
+        
+        .channel-item.active {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: var(--discord-text);
+        }
+        
+        .chat-container {
+            background-color: var(--discord-chat);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .chat-header {
+            background-color: var(--discord-channels);
+            padding: 16px 24px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .chat-messages {
+            flex: 1;
+            padding: 16px 24px;
+            overflow-y: auto;
+            max-height: calc(100vh - 120px);
+        }
+        
+        .chat-input-container {
+            padding: 16px 24px;
+            background-color: var(--discord-channels);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .message {
+            margin-bottom: 16px;
+            display: flex;
+            align-items: flex-start;
+        }
+        
+        .message-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: var(--discord-accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+            font-weight: bold;
+            color: white;
+        }
+        
+        .message-content {
+            flex: 1;
+        }
+        
+        .message-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+        
+        .message-username {
+            font-weight: 600;
+            margin-right: 8px;
+        }
+        
+        .message-timestamp {
+            color: var(--discord-muted);
+            font-size: 12px;
+        }
+        
+        .message-text {
+            color: var(--discord-text);
+            line-height: 1.4;
+        }
+        
+        .system-message {
+            text-align: center;
+            color: var(--discord-muted);
+            font-style: italic;
+            margin: 8px 0;
+        }
+        
+        .form-control {
+            background-color: var(--discord-bg);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--discord-text);
+        }
+        
+        .form-control:focus {
+            background-color: var(--discord-bg);
+            border-color: var(--discord-accent);
+            color: var(--discord-text);
+            box-shadow: 0 0 0 0.2rem rgba(88, 101, 242, 0.25);
+        }
+        
+        .btn-primary {
+            background-color: var(--discord-accent);
+            border-color: var(--discord-accent);
+        }
+        
+        .btn-primary:hover {
+            background-color: #4752c4;
+            border-color: #4752c4;
+        }
+        
+        .join-form {
+            background-color: var(--discord-channels);
+            padding: 16px;
+            margin: 16px 8px;
+            border-radius: 8px;
+        }
+        
+        .members-list {
+            background-color: var(--discord-channels);
+            width: 240px;
+            position: fixed;
+            right: 0;
+            top: 0;
+            min-height: 100vh;
+            padding: 16px;
+            overflow-y: auto;
+        }
+        
+        .member-item {
+            display: flex;
+            align-items: center;
+            padding: 4px 0;
+        }
+        
+        .member-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: var(--discord-accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 8px;
+            font-size: 12px;
+            font-weight: bold;
+            color: white;
+        }
+        
+        .member-name {
+            color: var(--discord-text);
+            font-size: 14px;
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    {% if current_user.is_authenticated %}
+    <div class="container-fluid p-0">
+        <div class="row g-0">
+            <!-- Server Sidebar -->
+            <div class="col-auto">
+                <div class="discord-sidebar">
+                    <div class="p-3">
+                        <h5 class="text-white mb-3">
+                            <i class="fas fa-server me-2"></i>Servers
+                        </h5>
+                        
+                        <!-- User's Servers -->
+                        {% if current_user.servers %}
+                            {% for membership in current_user.servers %}
+                                <a href="{{ url_for('servers.view_server', server_id=membership.server.id) }}" 
+                                   class="server-item {% if request.endpoint == 'servers.view_server' and request.view_args.server_id == membership.server.id %}active{% endif %}">
+                                    <i class="fas fa-server me-2"></i>
+                                    {{ membership.server.name }}
+                                </a>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted small">No servers yet</p>
+                        {% endif %}
+                        
+                        <!-- Join Server Form -->
+                        <div class="join-form mt-4">
+                            <h6 class="text-white mb-3">Join Server</h6>
+                            <form method="POST" action="{{ url_for('servers.join_by_code_inline') }}">
+                                {{ join_form.hidden_tag() }}
+                                <div class="mb-2">
+                                    {{ join_form.code(class="form-control form-control-sm") }}
+                                </div>
+                                {{ join_form.submit(class="btn btn-primary btn-sm w-100") }}
+                            </form>
+                        </div>
+                        
+                        <!-- Create Server Link -->
+                        <div class="mt-3">
+                            <a href="{{ url_for('servers.create_server') }}" class="btn btn-outline-primary btn-sm w-100">
+                                <i class="fas fa-plus me-1"></i>Create Server
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Main Content -->
+            <div class="col">
+                <div class="discord-main">
+                    {% block content %}{% endblock %}
+                </div>
+            </div>
+            
+            <!-- Members Sidebar (only show on server pages) -->
+            {% if request.endpoint and 'servers' in request.endpoint and 'server_id' in request.view_args %}
+            <div class="col-auto">
+                <div class="members-list">
+                    <h6 class="text-white mb-3">Members</h6>
+                    {% if members %}
+                        {% for member in members %}
+                            <div class="member-item">
+                                <div class="member-avatar">
+                                    {{ member.username[0].upper() }}
+                                </div>
+                                <div class="member-name">{{ member.username }}</div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted small">No members</p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+        {% block content %}{% endblock %}
+    {% endif %}
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
